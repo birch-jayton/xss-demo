@@ -12,6 +12,8 @@ import MemoryCard, { MemoryCardProps } from "./MemoryCard.tsx";
 import React from "react";
 import AddMemoryForm from "./AddMemoryForm.tsx";
 import AddMemoryPreview from "./AddMemoryPreview.tsx";
+import IntroDialog from "./IntroDialog.tsx";
+import SuccessDialog from "./SuccessDialog.tsx";
 
 const defaultMemories: Array<MemoryCardProps> = [
   {
@@ -44,6 +46,11 @@ const defaultMemories: Array<MemoryCardProps> = [
   },
 ];
 
+function previewContainsXSS(previewMemory: MemoryCardProps) {
+  const { link } = previewMemory;
+  return link.includes("javascript:");
+}
+
 function getPreviewMemory() {
   const urlParams = new URLSearchParams(window.location.search);
   const rawPreviewMemory = urlParams.get("memory");
@@ -59,10 +66,20 @@ function App() {
     React.useState<Array<MemoryCardProps>>(defaultMemories);
   const [isMemoryFormOpen, setIsMemoryFormOpen] = React.useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const [isIntroDialogOpen, setIsIntroDialogOpen] = React.useState(true);
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = React.useState(false);
 
   const previewMemory = getPreviewMemory();
 
-  if (previewMemory && !isPreviewOpen) {
+  if (
+    previewMemory &&
+    previewContainsXSS(previewMemory) &&
+    !isSuccessDialogOpen
+  ) {
+    setIsSuccessDialogOpen(true);
+  }
+
+  if (previewMemory && !previewContainsXSS(previewMemory) && !isPreviewOpen) {
     setIsPreviewOpen(true);
   }
 
@@ -117,6 +134,17 @@ function App() {
         setMemories={setMemories}
         setIsOpen={setIsPreviewOpen}
       />
+      <IntroDialog
+        isOpen={isIntroDialogOpen}
+        setIsOpen={setIsIntroDialogOpen}
+      />
+      {previewMemory && (
+        <SuccessDialog
+          isOpen={isSuccessDialogOpen}
+          setIsOpen={setIsSuccessDialogOpen}
+          previewMemory={previewMemory}
+        />
+      )}
     </>
   );
 }
